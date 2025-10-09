@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import MatrixRain from './components/MatrixRain.jsx'; // The background animation
-import './index.css'; // Imports the main CSS for styling
+// Re-importing the MatrixRain component
+import MatrixRain from './components/MatrixRain.jsx'; 
+import './index.css';
 
 // --- Main Application Component ---
 function App() {
-  const [activeView, setActiveView] = useState('games'); // 'games', 'logs', or 'system'
+  const [activeView, setActiveView] = useState('games');
   const [games, setGames] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [metrics, setMetrics] = useState(null);
   const logContainerRef = useRef(null);
 
-  // --- Effect to handle backend communication ---
+  // --- Effect for backend communication ---
   useEffect(() => {
-    // Initial scan for Steam games when the app loads
     const scanGames = async () => {
       if (window.electronAPI) {
         const foundGames = await window.electronAPI.scanSteamGames();
@@ -20,51 +21,56 @@ function App() {
     };
     scanGames();
 
-    // Listen for log updates from the main process
+    let removeLogListener;
     if (window.electronAPI) {
-      const removeLogListener = window.electronAPI.onLogUpdate((logLine) => {
+      removeLogListener = window.electronAPI.onLogUpdate((logLine) => {
         setLogs((prevLogs) => [...prevLogs, logLine]);
       });
-
-      // Clean up the listener when the component unmounts
-      return () => {
-        removeLogListener();
-      };
     }
+
+    return () => {
+      if (removeLogListener) removeLogListener();
+    };
   }, []);
 
-  // Effect to auto-scroll the log view
+  // Effect for system metrics
+  useEffect(() => {
+    let removeMetricsListener;
+    if (window.electronAPI) {
+      removeMetricsListener = window.electronAPI.onSystemMetricsUpdate((newMetrics) => {
+        setMetrics(newMetrics);
+      });
+    }
+    return () => {
+      if(removeMetricsListener) removeMetricsListener();
+    };
+  }, []);
+
+  // Effect to auto-scroll logs
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [logs]);
 
-  // --- Helper function to handle button clicks ---
+  // --- Handlers ---
   const handleRescan = async () => {
     if (window.electronAPI) {
-      setLogs((prev) => [...prev, '[INFO] Rescanning for Steam games...']);
+      setLogs((prev) => [...prev, '[INFO] Rescanning...']);
       const foundGames = await window.electronAPI.scanSteamGames();
       setGames(foundGames || []);
       setLogs((prev) => [...prev, `[INFO] Scan complete. Found ${foundGames.length} games.`]);
     }
   };
 
-  // --- UI Components for each view ---
+  // --- View Components ---
   const GamesView = () => (
     <div>
       <h2>Detected Games</h2>
       <div style={styles.grid}>
-        {games.length > 0 ? (
-          games.map((game) => (
-            <div key={game.appId || game.name} style={styles.card}>
-              <p>{game.name}</p>
-              {/* You would add a button here to start monitoring */}
-            </div>
-          ))
-        ) : (
-          <p>No Steam games found. Try rescanning or ensure Steam is running.</p>
-        )}
+        {games.length > 0 ? games.map((game) => (
+          <div key={game.appId || game.name} style={styles.card}><p>{game.name}</p></div>
+        )) : <p>No Steam games found. Try rescanning.</p>}
       </div>
     </div>
   );
@@ -73,18 +79,21 @@ function App() {
     <div>
       <h2>Session Logs</h2>
       <div ref={logContainerRef} style={styles.logContainer}>
-        {logs.map((line, index) => (
-          <pre key={index} style={styles.logLine}>{line}</pre>
-        ))}
+        {logs.map((line, index) => <pre key={index} style={styles.logLine}>{line}</pre>)}
       </div>
     </div>
   );
 
   const SystemView = () => (
-    // Placeholder for system health metrics
     <div>
       <h2>System Health</h2>
-      <p>CPU and RAM usage would be displayed here.</p>
+      {metrics ? (
+        <div>
+          <h3>CPU Usage: {metrics.cpu}%</h3>
+          <h3>RAM Usage: {metrics.ram.used} GB / {metrics.ram.total} GB</h3>
+        </div>
+      ) : <p>Loading system metrics...</p>}
+      <p style={{ fontSize: '0.8em', opacity: 0.7 }}>Note: GPU monitoring is not implemented.</p>
     </div>
   );
 
@@ -96,13 +105,12 @@ function App() {
         <header style={styles.header}>
           <h1>CrashWatchdog</h1>
           <div>
-            <button onClick={handleRescan}>Rescan Steam</button>
-            <button onClick={() => setActiveView('games')}>Games</button>
-            <button onClick={() => setActiveView('logs')}>Logs</button>
-            <button onClick={() => setActiveView('system')}>System</button>
+            <button style={styles.button} onMouseOver={(e) => e.currentTarget.style.backgroundColor = styles.buttonHover.backgroundColor} onMouseOut={(e) => e.currentTarget.style.backgroundColor = styles.button.background} onClick={handleRescan}>Rescan Steam</button>
+            <button style={styles.button} onMouseOver={(e) => e.currentTarget.style.backgroundColor = styles.buttonHover.backgroundColor} onMouseOut={(e) => e.currentTarget.style.backgroundColor = styles.button.background} onClick={() => setActiveView('games')}>Games</button>
+            <button style={styles.button} onMouseOver={(e) => e.currentTarget.style.backgroundColor = styles.buttonHover.backgroundColor} onMouseOut={(e) => e.currentTarget.style.backgroundColor = styles.button.background} onClick={() => setActiveView('logs')}>Logs</button>
+            <button style={styles.button} onMouseOver={(e) => e.currentTarget.style.backgroundColor = styles.buttonHover.backgroundColor} onMouseOut={(e) => e.currentTarget.style.backgroundColor = styles.button.background} onClick={() => setActiveView('system')}>System</button>
           </div>
         </header>
-
         <main style={styles.viewContainer}>
           {activeView === 'games' && <GamesView />}
           {activeView === 'logs' && <LogsView />}
@@ -115,52 +123,66 @@ function App() {
 
 // --- Styles Object ---
 const styles = {
-  mainContent: {
-    position: 'relative',
-    zIndex: 1,
-    padding: '1rem 2rem',
-    backgroundColor: 'rgba(10, 25, 10, 0.8)',
-    border: '1px solid #00ff00',
-    margin: '2rem',
-    borderRadius: '8px',
-    boxShadow: '0 0 15px rgba(0, 255, 0, 0.3)',
+  mainContent: { 
+    position: 'relative', 
+    zIndex: 1, 
+    padding: '1rem 2rem', 
+    backgroundColor: 'rgba(0, 20, 0, 0.75)', // Darker, more transparent background
+    border: '1px solid #00ff00', 
+    margin: '2rem', 
+    borderRadius: '8px', 
+    boxShadow: '0 0 20px rgba(0, 255, 0, 0.2)' 
   },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottom: '1px solid #00ff00',
-    paddingBottom: '1rem',
-    marginBottom: '1rem',
+  button: { 
+    background: 'transparent', 
+    border: '1px solid #00ff00', 
+    padding: '8px 16px', 
+    margin: '0 5px', 
+    cursor: 'pointer', 
+    fontFamily: "'Share Tech Mono', monospace", 
+    fontSize: '1em', 
+    transition: 'background-color 0.2s ease-in-out' 
   },
-  viewContainer: {
-    minHeight: '60vh',
+  buttonHover: { 
+    backgroundColor: 'rgba(0, 255, 0, 0.1)' 
   },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-    gap: '1rem',
+  header: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    borderBottom: '1px solid #00ff00', 
+    paddingBottom: '1rem', 
+    marginBottom: '1rem' 
   },
-  card: {
-    border: '1px solid #00ff00',
-    padding: '1rem',
-    textAlign: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  viewContainer: { 
+    minHeight: '60vh' 
   },
-  logContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    border: '1px solid #00ff00',
-    height: '60vh',
-    overflowY: 'auto',
-    padding: '0.5rem',
-    fontFamily: 'monospace',
+  grid: { 
+    display: 'grid', 
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+    gap: '1rem' 
   },
-  logLine: {
-    margin: 0,
-    padding: '2px 0',
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-all',
+  card: { 
+    border: '1px solid #00ff00', 
+    padding: '1rem', 
+    textAlign: 'center', 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)' 
   },
+  logContainer: { 
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', 
+    border: '1px solid #00ff00', 
+    height: '60vh', 
+    overflowY: 'auto', 
+    padding: '0.5rem', 
+    fontFamily: 'monospace' 
+  },
+  logLine: { 
+    margin: 0, 
+    padding: '2px 0', 
+    whiteSpace: 'pre-wrap', 
+    wordBreak: 'break-all' 
+  }
 };
 
 export default App;
+

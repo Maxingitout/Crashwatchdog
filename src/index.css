@@ -1,9 +1,19 @@
+/* This is the main CSS file for the application.
+  It sets the global styles for the matrix theme.
+*/
+
 body {
   margin: 0;
-  font-family: 'Courier New', Courier, monospace;
+  /* Use the new font we imported in index.html */
+  font-family: 'Share Tech Mono', monospace; 
   background-color: #000;
   color: #0F0;
+  /* Ensures a scrollbar is always present to prevent layout shifts */
+  overflow-y: scroll; 
 }
+
+/* A universal rule to make sure all text is green */
 * {
-  color: #0F0;
+    color: #0F0;
 }
+
