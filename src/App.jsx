@@ -1,20 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MatrixRain from './components/MatrixRain.jsx';
 import './index.css';
+import logo from './assets/logo.png';
 
 function App() {
   const [activeView, setActiveView] = useState('games');
   const [games, setGames] = useState([]);
   const [logs, setLogs] = useState([]);
   const [metrics, setMetrics] = useState(null);
-  // New state to track the monitoring status
   const [monitoringStatus, setMonitoringStatus] = useState({ active: false, game: null, hang: false });
   const logContainerRef = useRef(null);
 
-  // This useEffect hook sets up all the listeners to the backend
   useEffect(() => {
     const api = window.electronAPI;
-    if (!api) return; // Exit if the API bridge isn't available
+    if (!api) return;
 
     const scanGames = async () => {
       const foundGames = await api.scanSteamGames();
@@ -22,29 +21,24 @@ function App() {
     };
     scanGames();
 
-    // Set up all event listeners and store their cleanup functions
     const listeners = [
       api.onLogUpdate((logLine) => setLogs((prev) => [...prev, logLine])),
       api.onSystemMetricsUpdate((newMetrics) => setMetrics(newMetrics)),
       api.onMonitoringStopped(() => setMonitoringStatus({ active: false, game: null, hang: false })),
-      // This is the new listener for our hang detection feature
       api.onMonitoringHanged(() => setMonitoringStatus((prev) => ({ ...prev, hang: true }))),
     ];
 
-    // Return a single cleanup function that removes all listeners
     return () => {
       listeners.forEach(removeListener => removeListener());
     };
   }, []);
 
-  // Auto-scrolls the log view to the bottom
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [logs]);
 
-  // --- Event Handlers ---
   const handleRescan = async () => {
     if (window.electronAPI) {
       setLogs((prev) => [...prev, '[INFO] Rescanning for Steam games...']);
@@ -67,7 +61,7 @@ function App() {
     }
   };
 
-  // --- View Components ---
+  // --- FULLY IMPLEMENTED VIEW COMPONENTS ---
   const GamesView = () => (
     <div>
       <h2>Detected Games</h2>
@@ -114,17 +108,20 @@ function App() {
       ) : (
         <p>Loading system metrics...</p>
       )}
-      <p style={{ fontSize: '0.8em', opacity: 0.7 }}>Note: GPU monitoring is highly platform-specific and not implemented.</p>
+      <p style={{ fontSize: '0.8em', opacity: 0.7 }}>Note: GPU monitoring is not implemented.</p>
     </div>
   );
+  // ------------------------------------
 
-  // --- Main Render Output ---
   return (
     <>
       <MatrixRain />
       <div style={styles.mainContent}>
         <header style={styles.header}>
-          <h1>CrashWatchdog</h1>
+          <div style={styles.titleContainer}>
+            <img src={logo} alt="CrashWatchdog Logo" style={styles.logo} />
+            <h1>CrashWatchdog</h1>
+          </div>
           <div>
             <button style={styles.button} onClick={handleRescan}>Rescan Steam</button>
             <button style={styles.button} onClick={() => setActiveView('games')}>Games</button>
@@ -133,11 +130,9 @@ function App() {
           </div>
         </header>
 
-        {/* This banner only appears when monitoring is active */}
         {monitoringStatus.active && (
           <div style={styles.statusBanner}>
             Monitoring: {monitoringStatus.game}
-            {/* This message only appears if a hang is detected */}
             {monitoringStatus.hang && <span style={styles.hangText}> - HANG DETECTED</span>}
             <button style={{...styles.button, marginLeft: '20px'}} onClick={handleStopMonitoring}>Stop</button>
           </div>
@@ -153,8 +148,16 @@ function App() {
   );
 }
 
-// --- Styles Object ---
 const styles = {
+  logo: {
+    width: '128px',
+    height: '128px',
+    marginRight: '1rem',
+  },
+  titleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+  },
   mainContent: {
     position: 'relative',
     zIndex: 1,
@@ -173,7 +176,7 @@ const styles = {
     cursor: 'pointer',
     fontFamily: "'Share Tech Mono', monospace",
     fontSize: '1em',
-    color: '#00ff00', // Ensure button text is green
+    color: '#00ff00',
   },
   header: {
     display: 'flex',
@@ -183,9 +186,7 @@ const styles = {
     paddingBottom: '1rem',
     marginBottom: '1rem',
   },
-  viewContainer: {
-    minHeight: '60vh',
-  },
+  viewContainer: { minHeight: '60vh' },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
@@ -223,7 +224,7 @@ const styles = {
     alignItems: 'center',
   },
   hangText: {
-    color: '#ff4d4d', // A brighter red for better visibility
+    color: '#ff4d4d',
     fontWeight: 'bold',
     textShadow: '0 0 5px red',
   },
