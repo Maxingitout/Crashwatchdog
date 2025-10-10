@@ -2,7 +2,6 @@ import { app, BrowserWindow, ipcMain, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { setupIpcHandlers } from './ipcHandlers.js';
-// This correctly imports the package for an ES Module project
 import electronSquirrelStartup from 'electron-squirrel-startup';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -15,16 +14,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const createWindow = () => {
-  // --- ICON LOGIC ---
-  // The path needs to go up one level from `src` to the project root
+  // --- NEW ICON LOGIC ---
+  // Create a path to the icon.png file in the project's root directory
   const iconPath = path.join(__dirname, '..', 'icon.png');
   let appIcon = null;
   try {
+    // Create a native image object from the file
     appIcon = nativeImage.createFromPath(iconPath);
   } catch (e) {
-    console.error("Failed to load application icon:", e);
+    console.error("Failed to load application icon from path:", iconPath, e);
   }
-  // ------------------
+  // --------------------
 
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -37,18 +37,15 @@ const createWindow = () => {
     ...(appIcon && { icon: appIcon }),
   });
 
-  // --- CORRECT URL LOADING LOGIC ---
-  // MAIN_WINDOW_VITE_DEV_SERVER_URL is an environment variable that Electron Forge
-  // provides automatically during development. It will be undefined in production.
+  // Load the app's URL from the Vite development server
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    // This is the correct path for the production build
+    // Or load the production build file
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
-  // ------------------------------------
 
-  // Open the DevTools automatically for easy debugging.
+  // Open the DevTools automatically.
   mainWindow.webContents.openDevTools();
 
   // Set up all our backend event listeners
@@ -66,8 +63,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
+  // On OS X, re-create a window when the dock icon is clicked
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
