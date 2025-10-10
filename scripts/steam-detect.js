@@ -2,9 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execSync } from 'node:child_process'
 
-// ✅ Full Steam game detection supporting multiple drives (C:, D:, etc.)
-// Works even if libraryfolders.vdf is missing.
-
 export async function detectSteamGames() {
   const roots = findSteamRoots()
   const libraries = new Set()
@@ -14,7 +11,6 @@ export async function detectSteamGames() {
     const sa = path.join(root, 'steamapps')
     if (fs.existsSync(sa)) libraries.add(sa)
 
-    // Also parse libraryfolders.vdf if present under this root
     const vdfPath = path.join(sa, 'libraryfolders.vdf')
     if (fs.existsSync(vdfPath)) {
       try {
@@ -51,7 +47,6 @@ export async function detectSteamGames() {
     }
   }
 
-  // Deduplicate by installdir/name
   const seen = new Set()
   return games.filter(g => {
     const k = (g.installdir || '') + '|' + (g.name || '')
@@ -61,20 +56,17 @@ export async function detectSteamGames() {
   })
 }
 
-// --- helpers ---
 
 function findSteamRoots() {
   const roots = new Set()
   if (process.platform !== 'win32') return []
 
-  // Registry SteamPath
   try {
     const ps = `Get-ItemProperty -Path 'HKCU:\\Software\\Valve\\Steam' -Name SteamPath | Select-Object -ExpandProperty SteamPath`
     const out = execSync(['powershell','-NoProfile','-Command', ps].join(' '), { encoding: 'utf-8' }).trim()
     if (out && fs.existsSync(out)) roots.add(out)
   } catch {}
 
-  // Common defaults + typical library locations
   const candidates = [
     'C:\\Program Files (x86)\\Steam',
     'C:\\Program Files\\Steam',
@@ -96,7 +88,6 @@ function parseLibraryFolders(text) {
   let m
   while ((m = re.exec(text)) !== null) {
     let p = m[1]
-    // Normalize \\ to \
     p = p.replace(/\\\\/g, '\\')
     paths.push(p)
   }
@@ -104,7 +95,6 @@ function parseLibraryFolders(text) {
 }
 
 function parseAppManifest(text) {
-  // Minimal parser that pulls out "name" and "installdir"
   const nameMatch = /"name"\s*"([^"]*)"/i.exec(text)
   const dirMatch = /"installdir"\s*"([^"]*)"/i.exec(text)
   if (!nameMatch && !dirMatch) return null

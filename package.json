@@ -1,8 +1,8 @@
 {
-  "name": "crashwatchdog-new",
-  "productName": "crashwatchdog-new",
+  "name": "crashwatchdog",
+  "productName": "crashwatchdog",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "CrashWatchDog is an app to detect game crashes",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",

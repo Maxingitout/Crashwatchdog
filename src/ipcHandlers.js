@@ -4,7 +4,6 @@ import { detectSteamGames } from '../scripts/steam-detect.js';
 import find from 'find-process';
 import pUsage from 'pidusage';
 
-// These variables hold our repeating timers
 let metricsInterval;
 let monitoringInterval;
 
@@ -51,7 +50,7 @@ export function setupIpcHandlers(ipcMain, mainWindow) {
     ipcMain.on('start-monitoring', async (event, game) => {
         if (monitoringInterval) clearInterval(monitoringInterval);
         
-        // Extract the executable name from the full path
+
         const processName = game.executable.split('\\').pop().split('/').pop();
         
         try {
@@ -71,35 +70,35 @@ export function setupIpcHandlers(ipcMain, mainWindow) {
             }
             
             let hangCounter = 0;
-            const HANG_THRESHOLD = 5; // 5 checks * 2000ms interval = 10 seconds of low CPU
+            const HANG_THRESHOLD = 5; 
 
             monitoringInterval = setInterval(async () => {
                 try {
                     const stats = await pUsage(gamePid);
 
-                    // --- NEW HANG DETECTION LOGIC ---
+                  
                     if (stats.cpu < 1.0) {
                         hangCounter++;
                     } else {
-                        hangCounter = 0; // Reset counter if CPU shows activity
+                        hangCounter = 0; 
                     }
 
                     if (hangCounter >= HANG_THRESHOLD) {
                         const hangMsg = `[HANG] Process ${game.name} (PID: ${gamePid}) appears to be unresponsive.`;
                         if (mainWindow && !mainWindow.isDestroyed()) {
                             mainWindow.webContents.send('log-update', hangMsg);
-                            mainWindow.webContents.send('monitoring-hanged'); // New event for the UI
+                            mainWindow.webContents.send('monitoring-hanged'); 
                         }
                         clearInterval(monitoringInterval);
                         if (mainWindow && !mainWindow.isDestroyed()) {
                             mainWindow.webContents.send('monitoring-stopped');
                         }
-                        return; // Stop further checks
+                        return; 
                     }
-                    // --- END HANG DETECTION LOGIC ---
+                    
 
                 } catch (error) {
-                    // This error means the process doesn't exist anymore (crashed or closed)
+                    
                     const crashMsg = `[CRASH] Process ${game.name} (PID: ${gamePid}) is no longer running.`;
                     if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send('log-update', crashMsg);

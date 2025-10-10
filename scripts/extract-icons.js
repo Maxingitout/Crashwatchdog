@@ -2,8 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
 
-// Simple Windows-only icon extract using PowerShell and shell COM.
-// Falls back to copying the .exe if ICO fails.
 
 export function extractIcon(exePath, outIcoPath) {
   return new Promise((resolve) => {
