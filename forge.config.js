@@ -1,62 +1,49 @@
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
-
 module.exports = {
-packagerConfig: {
-  asar: true,
-  icon: 'build/icon' 
-},
+  packagerConfig: {
+    asar: true,
+    icon: 'build/icon' // build/icon.ico must include 256x256
+  },
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
-    },
+      name: '@electron-addons/electron-forge-maker-nsis',
+      config: {
+        // This hook lets us pass raw electron-builder config through
+        getAdditionalConfig: () => {
+          return {
+            appId: 'com.crashwatchdog.app',
+            productName: 'CrashWatchDog',
+
+            win: {
+              target: [{ target: 'nsis', arch: ['x64'] }],
+              icon: 'build/icon.ico',
+              // per-machine installs usually require elevation
+              requestedExecutionLevel: 'requireAdministrator'
+            },
+
+            nsis: {
+              oneClick: false,
+              perMachine: true,
+              allowToChangeInstallationDirectory: true,
+              createDesktopShortcut: true,
+              createStartMenuShortcut: true,
+              shortcutName: 'CrashWatchDog'
+            }
+          };
+        }
+      }
+    }
   ],
   plugins: [
     {
       name: '@electron-forge/plugin-vite',
       config: {
         build: [
-          {
-            entry: 'src/main.js',
-            config: 'vite.main.config.mjs',
-            target: 'main',
-          },
-          {
-            entry: 'src/preload.js',
-            config: 'vite.preload.config.mjs',
-            target: 'preload',
-          },
+          { entry: 'src/main.js', config: 'vite.main.config.mjs' },
+          { entry: 'src/preload.js', config: 'vite.preload.config.mjs' }
         ],
-        renderer: [
-          {
-            name: 'main_window',
-            config: 'vite.renderer.config.mjs',
-          },
-        ],
-      },
-    },
-    new FusesPlugin({
-      version: FuseVersion.V1,
-      [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableCookieEncryption]: true,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
-    }),
-  ],
+        renderer: [{ name: 'main_window', config: 'vite.renderer.config.mjs' }]
+      }
+    }
+  ]
 };

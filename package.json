@@ -1,7 +1,7 @@
 {
   "name": "crashwatchdog",
-  "productName": "crashwatchdog",
-  "version": "0.7.0",
+  "productName": "CrashWatchDog",
+  "version": "0.9.1",
   "description": "CrashWatchDog is an app to detect game crashes",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -18,11 +18,12 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@electron-addons/electron-forge-maker-nsis": "^7.0.2",
     "@electron-forge/cli": "^7.9.0",
     "@electron-forge/maker-deb": "^7.9.0",
     "@electron-forge/maker-rpm": "^7.9.0",
     "@electron-forge/maker-squirrel": "^7.9.0",
-    "@electron-forge/maker-zip": "^7.9.0",
+    "@electron-forge/maker-zip": "^7.11.1",
     "@electron-forge/plugin-auto-unpack-natives": "^7.9.0",
     "@electron-forge/plugin-fuses": "^7.9.0",
     "@electron-forge/plugin-vite": "^7.9.0",
@@ -32,11 +33,36 @@
   },
   "dependencies": {
     "electron-is-dev": "^3.0.1",
-    "electron-squirrel-startup": "^1.0.1",
     "find-process": "^2.0.0",
     "node-os-utils": "^1.3.7",
     "pidusage": "^4.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
+  },
+  "build": {
+    "appId": "com.crashwatchdog.app",
+    "productName": "CrashWatchDog",
+    "directories": {
+      "buildResources": "build"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CrashWatchDog"
+    }
   }
 }
