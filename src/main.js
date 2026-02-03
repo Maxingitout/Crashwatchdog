@@ -14,7 +14,6 @@ try {
 } catch {}
 
 const createWindow = () => {
-  // Use logo.png (exists) instead of icon.png (doesn't)
   const iconPath = path.join(__dirname, '..', 'logo.png');
 
   let appIcon = null;
@@ -39,7 +38,6 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
-  // DevTools in dev only (keeps packaged build clean)
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.webContents.openDevTools();
   }
@@ -50,13 +48,9 @@ const createWindow = () => {
 app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });

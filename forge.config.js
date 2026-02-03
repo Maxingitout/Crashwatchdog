@@ -1,39 +1,37 @@
 module.exports = {
   packagerConfig: {
     asar: true,
-    icon: 'build/icon'
+    icon: 'build/icon' // build/icon.ico must include 256x256
   },
   rebuildConfig: {},
   makers: [
     {
       name: '@electron-addons/electron-forge-maker-nsis',
       config: {
-        appId: 'com.crashwatchdog.app',
-        productName: 'CrashWatchdog',
-        artifactName: 'CrashWatchdog-Setup-${version}',
+        // This hook lets us pass raw electron-builder config through
+        getAdditionalConfig: () => {
+          return {
+            appId: 'com.crashwatchdog.app',
+            productName: 'CrashWatchDog',
 
-        // Force oneClick off at top-level too (wrapper quirk)
-        oneClick: false,
-        perMachine: false,
-        allowToChangeInstallationDirectory: true,
-        createDesktopShortcut: true,
-        createStartMenuShortcut: true,
-        shortcutName: 'CrashWatchdog',
+            win: {
+              target: [{ target: 'nsis', arch: ['x64'] }],
+              icon: 'build/icon.ico',
+              // per-machine installs usually require elevation
+              requestedExecutionLevel: 'requireAdministrator'
+            },
 
-        // Also keep it under nsis for completeness
-        nsis: {
-          oneClick: false,
-          perMachine: false,
-          allowToChangeInstallationDirectory: true,
-          createDesktopShortcut: true,
-          createStartMenuShortcut: true,
-          shortcutName: 'CrashWatchdog'
+            nsis: {
+              oneClick: false,
+              perMachine: true,
+              allowToChangeInstallationDirectory: true,
+              createDesktopShortcut: true,
+              createStartMenuShortcut: true,
+              shortcutName: 'CrashWatchDog'
+            }
+          };
         }
       }
-    },
-    {
-      name: '@electron-forge/maker-zip',
-      platforms: ['win32']
     }
   ],
   plugins: [
@@ -44,9 +42,7 @@ module.exports = {
           { entry: 'src/main.js', config: 'vite.main.config.mjs' },
           { entry: 'src/preload.js', config: 'vite.preload.config.mjs' }
         ],
-        renderer: [
-          { name: 'main_window', config: 'vite.renderer.config.mjs' }
-        ]
+        renderer: [{ name: 'main_window', config: 'vite.renderer.config.mjs' }]
       }
     }
   ]
