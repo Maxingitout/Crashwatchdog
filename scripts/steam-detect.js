@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 
 export async function detectSteamGames() {
   const roots = findSteamRoots()
@@ -24,6 +24,7 @@ export async function detectSteamGames() {
   }
 
   const games = []
+
   for (const lib of libraries) {
     let manifests = []
     try {
@@ -32,41 +33,61 @@ export async function detectSteamGames() {
 
     for (const file of manifests) {
       try {
+        const appIdMatch = /^appmanifest_(\d+)\.acf$/i.exec(file)
+        const appId = appIdMatch ? appIdMatch[1] : null
+
         const acf = fs.readFileSync(path.join(lib, file), 'utf-8')
         const meta = parseAppManifest(acf)
         if (!meta) continue
+
         const common = path.join(lib, 'common')
         const gameDir = path.join(common, meta.installdir || '')
+
+        // Basic exe detection (top-level only). Good enough for now.
         let exePath = null
         if (process.platform === 'win32' && fs.existsSync(gameDir)) {
           const exes = fs.readdirSync(gameDir).filter(x => x.toLowerCase().endsWith('.exe'))
           if (exes[0]) exePath = path.join(gameDir, exes[0])
         }
-        games.push({ name: meta.name || meta.installdir, installdir: meta.installdir, gameDir, exePath })
+
+        games.push({
+          appId,
+          name: meta.name || meta.installdir,
+          installdir: meta.installdir,
+          gameDir,
+          executable: exePath
+        })
       } catch {}
     }
   }
 
+  // de-dupe
   const seen = new Set()
   return games.filter(g => {
-    const k = (g.installdir || '') + '|' + (g.name || '')
+    const k = (g.appId || '') + '|' + (g.installdir || '') + '|' + (g.name || '')
     if (seen.has(k)) return false
     seen.add(k)
     return true
   })
 }
 
-
 function findSteamRoots() {
   const roots = new Set()
   if (process.platform !== 'win32') return []
 
+  // Try registry first (Windows-safe call)
   try {
     const ps = `Get-ItemProperty -Path 'HKCU:\\Software\\Valve\\Steam' -Name SteamPath | Select-Object -ExpandProperty SteamPath`
-    const out = execSync(['powershell','-NoProfile','-Command', ps].join(' '), { encoding: 'utf-8' }).trim()
+    const out = execFileSync(
+      'powershell.exe',
+      ['-NoProfile', '-Command', ps],
+      { encoding: 'utf-8', windowsHide: true }
+    ).trim()
+
     if (out && fs.existsSync(out)) roots.add(out)
   } catch {}
 
+  // Fallback common paths
   const candidates = [
     'C:\\Program Files (x86)\\Steam',
     'C:\\Program Files\\Steam',
@@ -98,5 +119,8 @@ function parseAppManifest(text) {
   const nameMatch = /"name"\s*"([^"]*)"/i.exec(text)
   const dirMatch = /"installdir"\s*"([^"]*)"/i.exec(text)
   if (!nameMatch && !dirMatch) return null
-  return { name: nameMatch ? nameMatch[1] : null, installdir: dirMatch ? dirMatch[1] : null }
+  return {
+    name: nameMatch ? nameMatch[1] : null,
+    installdir: dirMatch ? dirMatch[1] : null
+  }
 }
