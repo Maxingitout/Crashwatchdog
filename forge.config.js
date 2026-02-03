@@ -1,62 +1,53 @@
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
-
 module.exports = {
-packagerConfig: {
-  asar: true,
-  icon: 'build/icon' 
-},
+  packagerConfig: {
+    asar: true,
+    icon: 'build/icon'
+  },
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {},
+      name: '@electron-addons/electron-forge-maker-nsis',
+      config: {
+        appId: 'com.crashwatchdog.app',
+        productName: 'CrashWatchdog',
+        artifactName: 'CrashWatchdog-Setup-${version}',
+
+        // Force oneClick off at top-level too (wrapper quirk)
+        oneClick: false,
+        perMachine: false,
+        allowToChangeInstallationDirectory: true,
+        createDesktopShortcut: true,
+        createStartMenuShortcut: true,
+        shortcutName: 'CrashWatchdog',
+
+        // Also keep it under nsis for completeness
+        nsis: {
+          oneClick: false,
+          perMachine: false,
+          allowToChangeInstallationDirectory: true,
+          createDesktopShortcut: true,
+          createStartMenuShortcut: true,
+          shortcutName: 'CrashWatchdog'
+        }
+      }
     },
     {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
-    },
+      platforms: ['win32']
+    }
   ],
   plugins: [
     {
       name: '@electron-forge/plugin-vite',
       config: {
         build: [
-          {
-            entry: 'src/main.js',
-            config: 'vite.main.config.mjs',
-            target: 'main',
-          },
-          {
-            entry: 'src/preload.js',
-            config: 'vite.preload.config.mjs',
-            target: 'preload',
-          },
+          { entry: 'src/main.js', config: 'vite.main.config.mjs' },
+          { entry: 'src/preload.js', config: 'vite.preload.config.mjs' }
         ],
         renderer: [
-          {
-            name: 'main_window',
-            config: 'vite.renderer.config.mjs',
-          },
-        ],
-      },
-    },
-    new FusesPlugin({
-      version: FuseVersion.V1,
-      [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableCookieEncryption]: true,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
-    }),
-  ],
+          { name: 'main_window', config: 'vite.renderer.config.mjs' }
+        ]
+      }
+    }
+  ]
 };

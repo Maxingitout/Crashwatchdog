@@ -2,11 +2,6 @@ import { app, BrowserWindow, ipcMain, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { setupIpcHandlers } from './ipcHandlers.js';
-import electronSquirrelStartup from 'electron-squirrel-startup';
-
-if (electronSquirrelStartup) {
-  app.quit();
-}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,7 +21,7 @@ const createWindow = () => {
   try {
     appIcon = nativeImage.createFromPath(iconPath);
   } catch (e) {
-    console.error("Failed to load application icon from path:", iconPath, e);
+    console.error('Failed to load application icon from path:', iconPath, e);
   }
 
   const mainWindow = new BrowserWindow({
@@ -44,7 +39,11 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
-  mainWindow.webContents.openDevTools();
+  // DevTools in dev only (keeps packaged build clean)
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    mainWindow.webContents.openDevTools();
+  }
+
   setupIpcHandlers(ipcMain, mainWindow);
 };
 
